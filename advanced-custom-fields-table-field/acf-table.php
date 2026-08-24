@@ -3,7 +3,7 @@
 Plugin Name: Table Field Add-on for ACF and SCF
 Plugin URI: https://www.acf-table-field.com
 Description: This free Add-on adds a table field type for the plugins Advanced Custom Fields and Secure Custom Fields.
-Version: 1.3.35
+Version: 1.4.0
 Author: Johann Heyne
 Author URI: http://www.johannheyne.de
 License: GPLv2 or later
@@ -12,39 +12,69 @@ Text Domain: advanced-custom-fields-table-field
 Domain Path: /languages
 */
 
+namespace ACFTablefield;
+
+use ACFTablefield\PluginClasses;
+use ACFTablefield\PluginInfo;
+
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+
+	exit; // Exit if accessed directly
 }
 
-/**
- * Loads plugin textdomain.
- * https://codex.wordpress.org/Function_Reference/load_plugin_textdomain
- */
+add_action( 'init', function(){
 
-function acf_table_load_plugin_textdomain( $version ) {
+	/**
+	 * Exits if plugin already exits
+	 */
 
-	load_plugin_textdomain( 'advanced-custom-fields-table-field', false, dirname( plugin_basename(__FILE__) ) . '/languages/' );
-}
+	if ( defined( 'ACF_TABLE_FIELD_PLUGIN_VERSION' ) ) {
 
-add_action( 'init', 'acf_table_load_plugin_textdomain' );
+		return;
+	}
 
-
-/**
- * Registers the ACF field type.
- */
-
-add_action( 'init', 'jh_include_acf_field_table' );
-
-
-function jh_include_acf_field_table() {
+	/**
+	 * Exits if ACF is not present
+	 */
 
 	if ( ! function_exists( 'acf_register_field_type' ) ) {
 
 		return;
 	}
 
-	require_once __DIR__ . '/class-jh-acf-field-table.php';
-	require_once __DIR__ . '/integrations/polylang/init.php';
+	/**
+	 * Defines current plugin version.
+	 * Start at version 1.0.0 and use SemVer - https://semver.org
+	 */
 
-	acf_register_field_type( 'jh_acf_field_table' );
-}
+	define( 'ACF_TABLE_FIELD_PLUGIN_VERSION', '1.4.0' /* Plugin Version */ );
+
+	/**
+	 * Loads files
+	 */
+
+	require_once( __DIR__ . '/includes/autoload.php');
+	require_once( __DIR__ . '/integrations/polylang/init.php' );
+
+	/**
+	 * Inits settings page
+	 */
+
+	if ( is_admin() ) {
+
+		new PluginSettingsPage();
+	}
+
+	/**
+	 * Loads text domain
+	 */
+
+	load_plugin_textdomain( PluginInfo::get('text_domain'), false, PluginInfo::get('plugin_dir_name') . '/languages/' );
+
+	/**
+	 * Registers field with ACF
+	 */
+
+	PluginClasses::$classes['Field'] = acf_register_field_type( '\ACFTablefield\Field' );
+
+} );

@@ -2,8 +2,8 @@
 Contributors: jonua
 Tags: acf, table, scf, advanced custom fields, secure custom fields
 Requires at least: 5.3
-Tested up to: 6.9
-Stable tag: 1.3.35
+Tested up to: 7.1.0
+Stable tag: 1.4.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -524,7 +524,7 @@ However, only when activated as a plugin will updates be available.
 
 == PRO ==
 
-There is also a [Table Field Pro](https://www.acf-table-field.com) Add-on for the Advanced Custom Fields and Secure Custom Fields plugins.
+There is also a <a href="https://www.acf-table-field.com?src=wp" rel="noopener">Table Field Pro</a> Add-on for the Advanced Custom Fields and Secure Custom Fields plugins.
 
 * Setup custom default table
 * Setup minimum and maximum amount of rows and columns
@@ -542,12 +542,17 @@ There is also a [Table Field Pro](https://www.acf-table-field.com) Add-on for th
 
 The Pro plugin can run in parallel and you can change an existing field with field type "Table" to the field type "Table Pro" as required.
 
-[to the plugin website](https://www.acf-table-field.com)
+<a href="https://www.acf-table-field.com?src=wp" rel="noopener">to the plugin website</a>
 
 == Upgrade Notice ==
 
 
 == Changelog ==
+
+= 1.4.0 =
+* Updates vendor DOMPurify to version 3.4.14
+* Fixes Cross‑site Scripting vulnerability in table cell editor sanitization.
+* Adds plugin settings page with plugin infos
 
 = 1.3.35 =
 * Updates vendor DOMPurify to version 3.3.3 to address a Cross-site Scripting (XSS) vulnerability.
