@@ -272,7 +272,7 @@ if ( ! class_exists( '\ACFTablefield\Field' ) ) {
 				}
 
 				$e .= '<div class="acf-input-wrap">';
-					$e .= '<input type="hidden" data-field-options="' . urlencode( wp_json_encode( $data_field ) ) . '" id="' . esc_attr( $field['id'] ) . '"  class="' . esc_attr( $field['type'] ) . '" name="' . esc_attr( $field['name'] ) . '" value="' . $field['value'] . '"/>';
+					$e .= '<input type="hidden" data-field-options="' . esc_attr( urlencode( wp_json_encode( $data_field ) ) ) . '" id="' . esc_attr( $field['id'] ) . '"  class="' . esc_attr( $field['type'] ) . '" name="' . esc_attr( $field['name'] ) . '" value="' . $field['value'] . '"/>';
 				$e .= '</div>';
 
 			$e .= '</div>';
@@ -462,161 +462,322 @@ if ( ! class_exists( '\ACFTablefield\Field' ) ) {
 
 		function update_value( $value, $post_id, $field ) {
 
-			if ( is_string( $value ) ) {
+			// DECODES URL ENCODED JSON STRING VALUES {
 
-				$value = wp_unslash( $value );
-				$value = urldecode( $value );
-				$value = json_decode( $value, true );
-			}
+				if ( is_string( $value ) ) {
 
-			// UPDATE via update_field() {
-
-				if (
-					isset( $value['header'] ) OR
-					isset( $value['body'] )
-				) {
-
-					// try post_meta
-					$data = get_post_meta( $post_id, $field['name'], true );
-
-					// try user meta
-					if ( empty( $data ) ) {
-
-						$data = get_user_meta( str_replace('user_', '', $post_id ), $field['name'], true );
-					}
-
-					// try term_meta
-					if ( empty( $data ) ) {
-
-						$data = get_term_meta( str_replace('term_', '', $post_id ), $field['name'], true );
-					}
-
-					// try options
-					if (
-						empty( $data ) AND (
-							$post_id = 'options' OR
-							$post_id = 'option'
-						)
-					) {
-						$data = get_option('options_' . $field['name']);
-					}
-
-					// prevents updating a field, thats data are not defined yet
-					if ( empty( $data ) ) {
-
-						return false;
-					}
-
-					if ( is_string( $data ) ) {
-
-						$data = json_decode( $data, true );
-					}
-
-					if ( ! empty( $value['use_header'] ) ) {
-
-						$data['p']['o']['uh'] = 1;
-					}
-					else {
-
-						$data['p']['o']['uh'] = 0;
-					}
-
-					if ( isset( $value['caption'] ) ) {
-
-						$data['p']['ca'] = $value['caption'];
-					}
-
-					if (
-						isset( $value['header'] ) AND
-						$value['header'] !== false
-					) {
-
-						$data['h'] = $value['header'];
-					}
-
-					if ( isset( $value['body'] ) ) {
-
-						$data['b'] = $value['body'];
-					}
-
-					// SYNCHRONICE TOP ROW DATA WITH CHANGED AMOUNT OF BODY COLUMNS  {
-
-						$new_amount_of_body_cols = count( $value['body'][0] );
-						$db_amount_of_top_cols = count( $data['c'] );
-
-						if ( $new_amount_of_body_cols > $db_amount_of_top_cols ) {
-
-							for ( $i = $db_amount_of_top_cols; $i < $new_amount_of_body_cols; $i++ ) {
-
-								// adds a column entry in top row data
-								array_push( $data['c'], array( 'p' => '' ) );
-							}
-						}
-
-						if ( $new_amount_of_body_cols < $db_amount_of_top_cols ) {
-
-							for ( $i = $new_amount_of_body_cols; $i < $db_amount_of_top_cols; $i++ ) {
-
-								// removes a column entry in top row data
-								array_shift( $data['c'] );
-							}
-						}
-
-					// }
-
-					$value = $data;
+					$value = wp_unslash( $value );
+					$value = urldecode( $value );
+					$value = json_decode( $value, true );
 				}
 
 			// }
 
-			// SANITIZES DATA VALUES {
+			// REJECTS INVALID VALUE TYPES {
 
-				// CAPTION
+				if ( ! is_array( $value ) ) {
+
+					return null;
+				}
+
+				if ( empty( $value ) ) {
+
+					return null;
+				}
+
+			// }
+
+			// GETS FIELD DATA FROM DATABASE {
+
+				$data = array();
+
+				// Gets type of source
+				if ( function_exists( 'acf_decode_post_id' ) ) {
+
+					$info = acf_decode_post_id( $post_id );
+
+					if ( $info['type'] === 'block' ) {
+
+						// Gets post to parse blocks data
+						$post = get_post();
+
+						if ( isset( $post->post_content ) ) {
+
+							$blocks = parse_blocks( $post->post_content );
+
+							if ( ! empty( $blocks ) ) {
+
+								foreach( $blocks as $block ) {
+
+									/**
+									 * Continue when is no real block
+									 * Not just editable blocks are parsed as blocks, but also other post content.
+									 * Only real blocks have a blockName. Others have NULL as blockName value.
+									 */
+
+									if ( ! is_string( $block['blockName'] ) ) {
+
+										continue;
+									}
+
+									// Continue when is not a ACF blocks
+									if (
+										strpos( $block['blockName'], 'acf/' ) !== 0 ||
+										empty( $block['attrs'] )
+									) {
+
+										continue;
+									}
+
+									// Try if ACF block has value
+									if ( isset( $block['attrs']['data'][ $field['name'] ] ) ) {
+
+										$data = $block['attrs']['data'][ $field['name'] ];
+									}
+								}
+							}
+						}
+					}
+
+					else if (
+						$info['type'] === 'post' ||
+						$info['type'] === 'woo_order'
+					) {
+
+						$data = get_post_meta( $info['id'], $field['name'], true );
+					}
+
+					else if ( $info['type'] === 'user' ) {
+
+						$data = get_user_meta( $info['id'], $field['name'], true );
+					}
+
+					else if ( $info['type'] === 'term' ) {
+
+						$data = get_term_meta( $info['id'], $field['name'], true );
+					}
+
+					else if ( $info['type'] === 'option' ) {
+
+						$data = get_option('options_' . $field['name']);
+					}
+				}
+
+				if ( is_string( $data ) ) {
+
+					$data = json_decode( $data, true );
+				}
+
+				if ( ! is_array( $data ) ) {
+
+					$data = array();
+				}
+
+				$data_restore = $data;
+
+			// }
+
+			// GET SOME REQUIRED VARS {
+
+				$db_amount_of_top_cols = 1;
+				$new_amount_of_body_cols = $db_amount_of_top_cols;
+
+				if ( isset( $data['c'] ) ) {
+
+					$db_amount_of_top_cols = count( $data['c'] );
+				}
+
+				if ( isset( $value['b'][0] ) ) {
+
+					$new_amount_of_body_cols = count( $value['b'][0] );
+				}
+
+				if ( isset( $value['body'][0] ) ) {
+
+					$new_amount_of_body_cols = count( $value['body'][0] );
+				}
+
+			// }
+
+			// UPDATES FIELD DATA BY UNFORMATED VALUE {
+
+				if ( isset( $value['p']['o']['uh'] ) ) {
+
+					$data['p']['o']['uh']  = $value['p']['o']['uh'] ;
+				}
+
 				if ( isset( $value['p']['ca'] ) ) {
 
-					$value['p']['ca'] = wp_kses( $value['p']['ca'], 'post' );
+					$data['p']['ca']  = $value['p']['ca'] ;
 				}
 
-				// HEADER CELL VALUES
 				if (
-					isset( $value['h'] ) &&
-					is_array( $value['h'] )
+					isset( $value['h'] ) AND
+					$value['h'] !== false
 				) {
 
-					array_walk_recursive( $value['h'], function ( &$item ) {
-
-						if ( is_string( $item ) ) {
-
-							$item = wp_kses( $item, 'post' );
-						}
-					});
-
+					$data['h'] = $value['h'];
 				}
 
-				// BODY CELL VALUES
+				if ( isset( $value['b'] ) ) {
+
+					$data['b'] = $value['b'];
+				}
+
+			// }
+
+			// UPDATES FIELD DATA BY FORMATED VALUE {
+
 				if (
-					isset( $value['b'] ) &&
-					is_array( $value['b'] )
+					isset( $value['use_header'] ) &&
+					$value['use_header'] === true
 				) {
 
-					array_walk_recursive( $value['b'], function ( &$item ) {
+					$data['p']['o']['uh'] = 1;
+				}
 
-						if ( is_string( $item ) ) {
+				if (
+					isset( $value['use_header'] )
+					&& $value['use_header'] === false
+				) {
 
-							$item = wp_kses( $item, 'post' );
-						}
-					});
+					$data['p']['o']['uh'] = 0;
+				}
 
+				if ( isset( $value['caption'] ) ) {
+
+					$data['p']['ca'] = $value['caption'];
+				}
+
+				if (
+					isset( $value['header'] ) AND
+					$value['header'] !== false
+				) {
+
+					$data['h'] = $value['header'];
+				}
+
+				if ( isset( $value['body'] ) ) {
+
+					$data['b'] = $value['body'];
+				}
+
+			// }
+
+			// APPLIES CHANGES TO VALUE {
+
+				$value = $data;
+
+			// }
+
+			// SYNCHRONICE TOP ROW DATA WITH CHANGED AMOUNT OF BODY COLUMNS  {
+
+				if ( $new_amount_of_body_cols > $db_amount_of_top_cols ) {
+
+					for ( $i = $db_amount_of_top_cols; $i < $new_amount_of_body_cols; $i++ ) {
+
+						// adds a column entry in top row data
+						$value['c'] = $value['c'] ?? array();
+						array_push( $value['c'], array( 'p' => '' ) );
+					}
+				}
+
+				if ( $new_amount_of_body_cols < $db_amount_of_top_cols ) {
+
+					for ( $i = $new_amount_of_body_cols; $i < $db_amount_of_top_cols; $i++ ) {
+
+						// removes a column entry in top row data
+						array_pop( $value['c'] );
+					}
+				}
+
+			// }
+
+			// UPDATES PLUGIN VERSION {
+
+				$value['acftf']['v'] = ACF_TABLE_FIELD_PLUGIN_VERSION;
+
+			// }
+
+			// ENSURES ORDERING ROWS AND COLS BY GIVEN KEYS {
+
+				// ensures ordering of header row data
+				if ( isset( $value['h'] ) ) {
+
+					ksort( $value['h'], SORT_NUMERIC );
+				}
+
+				// ensures ordering of body rows and cols
+				if ( isset( $value['b'] ) ) {
+
+					ksort( $value['b'], SORT_NUMERIC );
+
+					foreach ( $value['b'] as &$row_data ) {
+
+						ksort( $row_data, SORT_NUMERIC );
+					}
+					unset( $row_data );
+				}
+
+			// }
+
+			// APPLIES DEFAULT VALUES BY SCHEMA {
+
+				$schema = $this->get_rest_schema( $field );
+				$value = $this->apply_schema_defaults( $value, $schema );
+
+			// }
+
+			// STORES REST VALIDATION RESULT {
+
+				$validation_before_sanitize = rest_validate_value_from_schema( $value, $schema );
+
+			// }
+
+			// SANITIZES VALUE BY REST SCHEMA {
+
+				$value = rest_sanitize_value_from_schema( $value, $schema );
+
+			// }
+
+			// SANITIZES STRING VALUES {
+
+				array_walk_recursive( $value, function ( &$item ) {
+
+					if ( is_string( $item ) ) {
+
+						$item = wp_kses_post( $item );
+					}
+				});
+
+			// }
+
+			// VALIDATES VALUE BY REST SCHEMA {
+
+				$sanitized_validation = rest_validate_value_from_schema( $value, $schema );
+
+				if ( is_wp_error( $sanitized_validation ) ) {
+
+					if ( is_wp_error( $validation_before_sanitize ) ) {
+
+						error_log( print_r( $validation_before_sanitize, true ) );
+					}
+					else {
+
+						error_log( print_r( $sanitized_validation, true ) );
+					}
+
+					return $data_restore;
 				}
 
 			// }
 
 			// $post_id is integer when post is saved, $post_id is string when block is saved
-			if ( gettype( $post_id ) === 'integer' ) {
+			/* if ( gettype( $post_id ) === 'integer' ) {
 
 				// only saving a post needs addslashes
 				$value = $this->table_slash( $value );
-			}
+			} */
 
 			return $value;
 		}
@@ -866,12 +1027,181 @@ if ( ! class_exists( '\ACFTablefield\Field' ) ) {
 			$schema = array(
 				'type'     => array( 'object', 'null' ),
 				'title' => 'ACF table custom field type',
-				'type' => array( 'object', 'boolean' ),
-				//'properties' => array(),
-				'required' => ! empty( $field['required'] ) ? array() : false,
+				'properties' => array(
+					'acftf' => array(
+                        'title' => 'Table general info',
+                        'type' => 'object',
+                        'properties' => array(
+                            'v' => array(
+                                'title' => 'Table Field plugin version',
+                                'type' => 'string',
+								'required' => true,
+								'default' => ACF_TABLE_FIELD_PLUGIN_VERSION,
+							),
+                        ),
+						'additionalProperties' => false,
+						'required' => true,
+						'default' => array( 'v' => ACF_TABLE_FIELD_PLUGIN_VERSION ),
+                    ),
+					'p' => array(
+						'title' => 'Field parameter',
+						'type' => 'object',
+						'properties' => array(
+							'o' => array(
+								'title' => 'Table options',
+								'type' => 'object',
+								'properties' => array(
+									'uh' => array(
+										'title' => 'Use table header',
+										'type' => 'integer',
+										'enum'     => array( 0, 1 ),
+										'required' => true,
+										'default' => 0,
+									),
+								),
+								'additionalProperties' => false,
+								'default' => array( 'uh' => 0 ),
+								'required' => true,
+							),
+							'ca' => array(
+								'title' => 'Table caption',
+								'type' => 'string',
+								'required' => true,
+								'default' => '',
+							),
+						),
+						'additionalProperties' => false,
+						'required' => true,
+						'default' => array( 'o' => array( 'uh' => 0 ), 'ca' => '' ),
+					),
+					'c' => array(
+						'title' => 'Table columns',
+						'type' => 'array',
+						'items' => array(
+							'title' => 'Table column',
+							'type' => 'object',
+							'properties' => array(
+								'p' => array(
+									'title' => 'Column parameters',
+									'type' => 'object',
+									'required' => true,
+									'default' => array(),
+								),
+							),
+							'additionalProperties' => false,
+							'default' => array( 'p' => array() ),
+							'required' => true,
+						),
+						'required' => true,
+						'default' => array( array( 'p' => '' ) ),
+					),
+					'h' => array(
+						'title' => 'Table header rows',
+						'type' => 'array',
+						'items' => array(
+							'title' => 'Table header cell',
+							'type' => 'object',
+							'properties' => array(
+								'c' => array(
+									'title' => 'Header cell content',
+									'type' => 'string',
+									'required' => true,
+									'default' => '',
+								),
+							),
+							'additionalProperties' => false,
+							'default' => array( 'c' => '' ),
+						),
+						'required' => true,
+						'default' => array( array( 'c' => '' ) ),
+					),
+					'b' => array(
+						'title' => 'Table body rows',
+						'type' => 'array',
+						'items' => array(
+							'title' => 'Table body columns',
+							'type' => 'array',
+							'items' => array(
+								'title' => 'Table body cell',
+								'type' => 'object',
+								'properties' => array(
+									'c' => array(
+										'title' => 'Header row cells',
+										'type' => 'string',
+										'required' => true,
+										'default' => '',
+									),
+								),
+								'additionalProperties' => false,
+								'default' => array( 'c' => '' ),
+							),
+							'required' => true,
+							'default' => array( array( 'c' => '' ) ),
+						),
+						'required' => true,
+						'default' => array( array( array( 'c' => '' ) ) ),
+					),
+				),
+				'additionalProperties' => false,
+				'required' => ! empty( $field['required'] ) ? true : false,
 			);
 
 			return $schema;
+		}
+
+		/**
+		* apply_schema_defaults()
+		*
+		* Applies default value entries given by schema
+		*/
+
+		function apply_schema_defaults( $value, array $schema ) {
+
+			if (
+				( null === $value || array() === $value ) &&
+				isset( $schema['default'] )
+			) {
+
+				$value = $schema['default'];
+			}
+
+			$schema_types = array();
+
+			if ( is_array( $schema['type'] ) ) {
+
+				$schema_types = $schema['type'];
+			}
+
+			if ( is_string( $schema['type'] ) ) {
+
+				$schema_types[] = $schema['type'];
+			}
+
+			if (
+				in_array( 'object', $schema_types ) &&
+				isset( $schema['properties'] ) &&
+				is_array( $value )
+			) {
+
+				foreach ( $schema['properties'] as $key => $prop_schema ) {
+
+					$value[ $key ] = $this->apply_schema_defaults( $value[ $key ] ?? null, $prop_schema );
+				}
+			}
+
+			if (
+				'array' === $schema['type'] &&
+				isset( $schema['items'] ) &&
+				is_array( $value )
+			) {
+
+				foreach ( $value as $i => $item ) {
+
+					$value[ $i ] = $this->apply_schema_defaults( $item, $schema['items'] );
+				}
+			}
+
+			return $value;
 		}
 
 		/**
