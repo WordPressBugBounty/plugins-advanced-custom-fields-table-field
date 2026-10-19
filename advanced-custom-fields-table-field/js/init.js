@@ -6,7 +6,7 @@ var ACFTableField = {};
 
 		var t = this;
 
-		t.version = '1.4.1';
+		t.version = '1.4.2';
 
 		t.param = {};
 
@@ -108,11 +108,19 @@ var ACFTableField = {};
 
 			t.init_once();
 
-			function isGutenberg() {
-				return !!(window.wp && wp.data && wp.data.select('core/editor'));
+			function isBlockEditor() {
+
+				if (
+					document.body &&
+					document.body.classList.contains('block-editor-page')
+				) {
+					return true;
+				}
+
+				return false;
 			}
 
-			function waitForGutenbergReady( callback ) {
+			function waitForBlockEditorReady( callback ) {
 
 
 				const check = () => {
@@ -162,9 +170,9 @@ var ACFTableField = {};
 
 			}
 
-			if ( isGutenberg() ) {
+			if ( isBlockEditor() ) {
 
-				waitForGutenbergReady(() => {
+				waitForBlockEditorReady(() => {
 					t.update_tables();
 					addMutationObserver();
 				});
