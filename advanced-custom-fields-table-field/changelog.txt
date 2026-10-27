@@ -1,5 +1,11 @@
 == Changelog ==
 
+= 1.5.0 =
+* Replaces cell editor box by inline editing like the Pro version
+* Removes the 100% width constraint from the editing table
+* Improves vertical overflow handling for the editing table
+* Improves Sortable column UI styling
+
 = 1.4.4 =
 * Adds sponsor and donation options
 
@@ -19,7 +25,7 @@
 
 = 1.4.0 =
 * Updates vendor DOMPurify to version 3.4.14
-* Fixes Cross‑site Scripting vulnerability in table cell editor sanitization.
+* Fixes Cross-site Scripting vulnerability in table cell editor sanitization.
 * Adds plugin settings page with plugin infos
 
 = 1.3.35 =

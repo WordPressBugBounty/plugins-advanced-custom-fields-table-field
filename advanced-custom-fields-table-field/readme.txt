@@ -3,7 +3,7 @@ Contributors: jonua
 Tags: acf, table, scf, advanced custom fields, secure custom fields
 Requires at least: 5.3
 Tested up to: 7.1.2
-Stable tag: 1.4.4
+Stable tag: 1.5.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,7 +16,7 @@ The Table Field plugin is an Add-on and enhances the functionality of the [Advan
 
 This plugin requires the [Advanced Custom Fields plugin](https://www.advancedcustomfields.com) or the [Secure Custom Fields plugin](https://wordpress.org/plugins/secure-custom-fields/)!
 
-The table field works also with the ACF repeater and flexible field types and supports the [ACF Blocks for Gutenberg](https://www.advancedcustomfields.com/blog/acf-5-8-introducing-acf-blocks-for-gutenberg/)
+The table field works also with the ACF repeater and flexible field types and supports the [ACF Blocks for Gutenberg](https://www.advancedcustomfields.com/blog/acf-5-8-introducing-acf-blocks-for-gutenberg/).
 
 = Features =
 * Table Header (Option)
@@ -85,7 +85,7 @@ if ( ! empty ( $table ) ) {
 }
 `
 
-= Table field returns no data on get_field()? =
+= The Table field returns no data on get_field()? =
 
 If the table has only one empty cell, then `get_field()` returns `FALSE`. `get_field()` returns NULL when a field is not stored in the database. That happens when a page is copied but not their fields content. You can check both with `empty()`…
 
@@ -508,10 +508,6 @@ However, only when activated as a plugin will updates be available.
 
 1. The Field Settings
 
-2. The Field Content Editing
-
-2. Grab the rows and columns in the grey area and drag them.
-
 
 == Translations ==
 
@@ -558,6 +554,12 @@ The Pro plugin can run alongside the free version, allowing you to convert exist
 
 == Changelog ==
 
+= 1.5.0 =
+* Replaces cell editor box by inline editing like the pro version
+* Removes the 100% width constraint from the editing table
+* Improves vertical overflow handling for the editing table
+* Improves Sortable column UI styling
+
 = 1.4.4 =
 * Adds sponsor and donation options
 
@@ -577,7 +579,7 @@ The Pro plugin can run alongside the free version, allowing you to convert exist
 
 = 1.4.0 =
 * Updates vendor DOMPurify to version 3.4.14
-* Fixes Cross‑site Scripting vulnerability in table cell editor sanitization.
+* Fixes Cross-site Scripting vulnerability in table cell editor sanitization.
 * Adds plugin settings page with plugin infos
 
 = 1.3.35 =
