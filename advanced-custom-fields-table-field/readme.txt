@@ -556,7 +556,10 @@ The Pro plugin can run alongside the free version, allowing you to convert exist
 
 == Changelog ==
 
-= 1.5.1 =
+= 1.5.2 =
+* Updates vendor DOMPurify to version 3.4.18
+
+= 1.5.2 =
 * Optimizes table text flow and wrapping
 
 = 1.5.0 =
