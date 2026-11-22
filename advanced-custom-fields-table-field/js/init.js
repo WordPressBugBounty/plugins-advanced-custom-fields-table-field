@@ -6,7 +6,7 @@ var ACFTableField = {};
 
 		var t = this;
 
-		t.version = '1.5.2';
+		t.version = '1.5.3';
 
 		t.param = {};
 

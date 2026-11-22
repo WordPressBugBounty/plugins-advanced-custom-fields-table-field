@@ -184,6 +184,30 @@ if ( ! class_exists( '\ACFTablefield\Field' ) ) {
 
 		}
 
+		/**
+		 * Decodes table data from a JSON string or a URL-encoded JSON string.
+		 * A plain JSON string, e.g. from update_field() or GraphQL, is decoded as is, without unslashing or URL-decoding.
+		 * Otherwise the string is unslashed and URL-decoded, like the value of the field input or of a Gutenberg block.
+		 *
+		 * @param string $value The JSON or URL-encoded JSON string
+		 * @param bool $is_valid_json Is set to true if the string was valid JSON
+		 * @return mixed The decoded value, null if the string is not valid JSON
+		 */
+
+		public static function decode_table_data_string( $value, &$is_valid_json = null ) {
+
+			$decoded_value = json_decode( (string) $value, true );
+
+			if ( json_last_error() !== JSON_ERROR_NONE ) {
+
+				$decoded_value = json_decode( urldecode( wp_unslash( (string) $value ) ), true );
+			}
+
+			$is_valid_json = json_last_error() === JSON_ERROR_NONE;
+
+			return $is_valid_json ? $decoded_value : null;
+		}
+
 		/*
 		*  render_field()
 		*
@@ -258,21 +282,33 @@ if ( ! class_exists( '\ACFTablefield\Field' ) ) {
 
 				$e .= '</div>';
 
-				if ( is_array( $field['value'] ) ) {
+				// FORMAT FIELD VALUE {
 
-					$field['value'] = wp_json_encode( $field['value'] );
-				}
+					$field_value = $field['value'];
 
-				if ( is_string( $field['value'] ) ) {
+					if ( is_string( $field_value ) ) {
 
-					if ( substr( $field['value'] , 0 , 1 ) === '{' ) {
+						$field_value = self::decode_table_data_string( $field_value, $is_valid_json );
 
-						$field['value'] = urlencode( $field['value'] );
+						if ( ! $is_valid_json ) {
+
+							$field_value = null;
+						}
 					}
-				}
+
+					if ( is_array( $field_value ) ) {
+
+						$field_value = urlencode( wp_json_encode( $field_value ) );
+					}
+					else {
+
+						$field_value = '';
+					}
+
+				// }
 
 				$e .= '<div class="acf-input-wrap">';
-					$e .= '<input type="hidden" data-field-options="' . esc_attr( urlencode( wp_json_encode( $data_field ) ) ) . '" id="' . esc_attr( $field['id'] ) . '"  class="' . esc_attr( $field['type'] ) . '" name="' . esc_attr( $field['name'] ) . '" value="' . $field['value'] . '"/>';
+					$e .= '<input type="hidden" data-field-options="' . esc_attr( urlencode( wp_json_encode( $data_field ) ) ) . '" id="' . esc_attr( $field['id'] ) . '"  class="' . esc_attr( $field['type'] ) . '" name="' . esc_attr( $field['name'] ) . '" value="' . esc_attr( $field_value ) . '"/>';
 				$e .= '</div>';
 
 			$e .= '</div>';
@@ -466,9 +502,7 @@ if ( ! class_exists( '\ACFTablefield\Field' ) ) {
 
 				if ( is_string( $value ) ) {
 
-					$value = wp_unslash( $value );
-					$value = urldecode( $value );
-					$value = json_decode( $value, true );
+					$value = self::decode_table_data_string( $value );
 				}
 
 			// }
@@ -767,19 +801,49 @@ if ( ! class_exists( '\ACFTablefield\Field' ) ) {
 						error_log( print_r( $sanitized_validation, true ) );
 					}
 
-					return $data_restore;
+					return $this->slash_value_for_storage( $data_restore, $post_id );
 				}
 
 			// }
 
-			// $post_id is integer when post is saved, $post_id is string when block is saved
-			/* if ( gettype( $post_id ) === 'integer' ) {
+			return $this->slash_value_for_storage( $value, $post_id );
+		}
 
-				// only saving a post needs addslashes
-				$value = $this->table_slash( $value );
-			} */
+		/**
+		 * Slashes the table data before ACF stores it.
+		 *
+		 * WordPress unslashes meta values in update_metadata() and ACF unslashes option values before update_option().
+		 * The table data is already unslashed at this point, so without slashing, backslashes in cell content would get lost.
+		 * Block data is captured by ACF without unslashing and therefore must not be slashed.
+		 *
+		 * @param mixed $value The table data
+		 * @param int|string $post_id The ACF post ID
+		 * @return mixed The slashed table data
+		 */
 
-			return $value;
+		function slash_value_for_storage( $value, $post_id ) {
+
+			if ( function_exists( 'acf_decode_post_id' ) ) {
+
+				$info = acf_decode_post_id( $post_id );
+
+				if ( $info['type'] === 'block' ) {
+
+					return $value;
+				}
+			}
+
+			// ACF captures values without storing them, e.g. when setting up block data with acf_setup_meta()
+			if (
+				function_exists( 'acf_get_instance' ) &&
+				class_exists( 'ACF_Local_Meta' ) &&
+				has_filter( 'acf/pre_update_metadata', array( acf_get_instance( 'ACF_Local_Meta' ), 'capture_update_metadata' ) )
+			) {
+
+				return $value;
+			}
+
+			return $this->table_slash( $value );
 		}
 
 		/*

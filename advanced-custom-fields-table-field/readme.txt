@@ -3,7 +3,7 @@ Contributors: jonua
 Tags: acf, table, scf, advanced custom fields, secure custom fields
 Requires at least: 5.3
 Tested up to: 7.1.2
-Stable tag: 1.5.1
+Stable tag: 1.5.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -524,42 +524,31 @@ However, only when activated as a plugin will updates be available.
 
 There is also a <a href="https://www.acf-table-field.com?src=wp" rel="noopener">Table Field Pro</a> Add-on for the Advanced Custom Fields and Secure Custom Fields plugins.
 
+
 The Pro plugin offers a highly configurable and flexible table interface.
 
-It provides support for 29 languages: Albanian, Chinese, Czech, Danish, Dutch, Finnish, French, (France), German, Greek, Hebrew, Hindi, Icelandic, Italian, Japanese, Korean, Lithuanian, Norwegian, (Bokmål), Polish, Portuguese, Russian, Serbian, Slovak, Slovenian, Spanish, Swedish, Turkish, Ukrainian, Vietnamese
-
-* Table data import for CSV and TSV
-* Table reset
-* Fullscreen table editing
-* Pre-definable custom default table
-* Pre-definable table editing functionalities
-* Pre-definable minimum and maximum amount of rows and columns
-* Pre-definable style choices for the table and all parts of the table
-* Custom column widths for the edditing table
-* Table foot
-* Stub column
-* Disable moving individual columns
-* Optional table cell content editing by configurable WordPress editor
-* Rowspan and colspan
-* Build in WordPress shortcode
-* Ouput - hide table when empty
-* Support for Polylang and Polylang Pro
-* Integrated WP GraphQL support
-* Configurable Sanitizing
+**Black Week 2026: Get 50% off Table Field Pro from November 23rd to November 29th.**
 
 The Pro plugin can run alongside the free version, allowing you to convert existing fields from the Table field type to Table Pro whenever needed.
 
 <a href="https://www.acf-table-field.com?src=wp" rel="noopener">to the plugin website</a>
+
+
 
 == Upgrade Notice ==
 
 
 == Changelog ==
 
+= 1.5.3 =
+* Fixes lost backslashes in table cell content on save
+* Fixes lost + and % characters when saving plain JSON via update_field()
+* Escapes the table field input value
+
 = 1.5.2 =
 * Updates vendor DOMPurify to version 3.4.18
 
-= 1.5.2 =
+= 1.5.1 =
 * Optimizes table text flow and wrapping
 
 = 1.5.0 =
